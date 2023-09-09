@@ -1,4 +1,4 @@
-from gym.envs.mujoco import HalfCheetahEnv
+# from gym.envs.mujoco import HalfCheetahEnv
 
 import rlkit.torch.pytorch_util as ptu
 from rlkit.data_management.env_replay_buffer import EnvReplayBuffer
@@ -9,11 +9,26 @@ from rlkit.torch.sac.policies import TanhGaussianPolicy, MakeDeterministic
 from rlkit.torch.sac.sac import SACTrainer
 from rlkit.torch.networks import ConcatMlp
 from rlkit.torch.torch_rl_algorithm import TorchBatchRLAlgorithm
+import argparse
+import torch
 
 
-def experiment(variant):
-    expl_env = NormalizedBoxEnv(HalfCheetahEnv())
-    eval_env = NormalizedBoxEnv(HalfCheetahEnv())
+def experiment(variant, args):
+    if args.task == 'halfcheetah':
+        from gym.envs.mujoco import HalfCheetahEnv
+        expl_env = NormalizedBoxEnv(HalfCheetahEnv())
+        eval_env = NormalizedBoxEnv(HalfCheetahEnv())
+    elif args.task == 'hopper':
+        from gym.envs.mujoco import HopperEnv
+        expl_env = NormalizedBoxEnv(HopperEnv())
+        eval_env = NormalizedBoxEnv(HopperEnv())
+    elif args.task == 'walker2d':
+        from gym.envs.mujoco import Walker2dEnv
+        expl_env = NormalizedBoxEnv(Walker2dEnv())
+        eval_env = NormalizedBoxEnv(Walker2dEnv())
+    else:
+        raise NotImplementedError()
+
     obs_dim = expl_env.observation_space.low.size
     action_dim = eval_env.action_space.low.size
 
@@ -81,6 +96,10 @@ def experiment(variant):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--task', type=str, default="halfcheetah", help="hopper, walker2d")
+
+    args = parser.parse_args()
     # noinspection PyTypeChecker
     variant = dict(
         algorithm="SAC",
@@ -106,6 +125,8 @@ if __name__ == "__main__":
             use_automatic_entropy_tuning=True,
         ),
     )
-    setup_logger('name-of-experiment', variant=variant)
-    # ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
-    experiment(variant)
+    setup_logger(args.task, variant=variant)
+
+    if torch.cuda.is_available():
+        ptu.set_gpu_mode(True)  # optionally set the GPU (default=False)
+    experiment(variant, args)
